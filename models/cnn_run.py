@@ -5,6 +5,9 @@ from __future__ import print_function
 
 import os
 import sys
+
+sys.path.append(".")
+print(sys.path)
 import time
 from datetime import timedelta
 

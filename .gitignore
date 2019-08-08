@@ -1,0 +1,9 @@
+__pycache__
+.idea
+checkpoints
+tensorboard
+dataset/dev/*
+dataset/test/*
+dataset/train/*
+dataset/*.csv
+dataset/*.zip

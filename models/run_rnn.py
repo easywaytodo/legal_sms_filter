@@ -12,7 +12,7 @@ import tensorflow as tf
 from sklearn import metrics
 
 from models.rnn_model import TRNNConfig, TextRNN
-from utils.sms_loader import read_vocab, read_category, batch_iter, process_file, build_vocab
+from data_processor.dataprocessor import read_vocab, read_category, batch_iter, process_file, build_vocab
 
 base_dir = 'data/cnews'
 train_dir = os.path.join(base_dir, 'cnews.train.txt')

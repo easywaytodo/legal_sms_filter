@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 
-import os
+
 import sys
 
 sys.path.append(".")
@@ -11,13 +11,11 @@ print(sys.path)
 import time
 from datetime import timedelta
 
-import numpy as np
 import tensorflow as tf
 from sklearn import metrics
 
 from models.cnn_model import TCNNConfig, TextCNN
-from utils.sms_loader import read_vocab, read_category, batch_iter, process_file, build_vocab
-
+from utils.dataProcesser import *
 
 base_dir = 'dataset'
 base_dic_dir = 'dataDic'
@@ -45,11 +43,10 @@ def feed_data(x_batch, y_batch, keep_prob):
     }
     return feed_dict
 
-
-def evaluate(sess, x_, y_):
+def evaluate(sess, x_, y_,dataprocessor):
 
     data_len = len(x_)
-    batch_eval = batch_iter(x_, y_, 128)
+    batch_eval = dataprocessor.batch_iter(x_, y_, 128)
     total_loss = 0.0
     total_acc = 0.0
     for x_batch, y_batch in batch_eval:
@@ -62,9 +59,10 @@ def evaluate(sess, x_, y_):
     return total_loss / data_len, total_acc / data_len
 
 
-def train():
+def train(dataprocessor):
     print("Configuring TensorBoard and Saver...")
     # Before training, please remove tensorboard folder
+    os.system('rm -rf tensorboard/textcnn checkpoints/*')
     tensorboard_dir = 'tensorboard/textcnn'
     if not os.path.exists(tensorboard_dir):
         os.makedirs(tensorboard_dir)
@@ -82,8 +80,8 @@ def train():
     print("Loading training and validation data...")
     # load training set and validation set
     start_time = time.time()
-    x_train, y_train = process_file(train_dir, word_to_id, cat_to_id, config.seq_length)
-    x_val, y_val = process_file(val_dir, word_to_id, cat_to_id, config.seq_length)
+    x_train, y_train = dataprocessor.process_file(train_dir, word_to_id, cat_to_id, config.seq_length)
+    x_val, y_val = dataprocessor.process_file(val_dir, word_to_id, cat_to_id, config.seq_length)
     time_dif = get_time_dif(start_time)
     print("process_file  x_train x_val cost-> :", time_dif)
 
@@ -102,7 +100,7 @@ def train():
     flag = False
     for epoch in range(config.num_epochs):
         print('Epoch:', epoch + 1)
-        batch_train = batch_iter(x_train, y_train, config.batch_size)
+        batch_train = dataprocessor.batch_iter(x_train, y_train, config.batch_size)
         for x_batch, y_batch in batch_train:
             feed_dict = feed_data(x_batch, y_batch, config.dropout_keep_prob)
 
@@ -115,7 +113,7 @@ def train():
                 # 每多少轮次输出在训练集和验证集上的性能
                 feed_dict[model.keep_prob] = 1.0
                 loss_train, acc_train = session.run([model.loss, model.acc], feed_dict=feed_dict)
-                loss_val, acc_val = evaluate(session, x_val, y_val)  # todo
+                loss_val, acc_val = evaluate(session, x_val, y_val)
 
                 if acc_val > best_acc_val:
                     # 保存最好结果
@@ -127,8 +125,8 @@ def train():
                     improved_str = ''
 
                 time_dif = get_time_dif(start_time)
-                msg = 'Iter: {0:>6}, Train Loss: {1:>6.2}, Train Acc: {2:>7.2%},' \
-                      + ' Val Loss: {3:>6.2}, Val Acc: {4:>7.2%}, Time: {5} {6}'
+                msg = 'Iter: {0}, Train Loss: {1}, Train Acc: {2},' \
+                      + ' Val Loss: {3}, Val Acc: {4}, Time: {5} {6}'
                 print(msg.format(total_batch, loss_train, acc_train, loss_val, acc_val, time_dif, improved_str))
 
             feed_dict[model.keep_prob] = config.dropout_keep_prob
@@ -144,28 +142,28 @@ def train():
             break
 
 
-def test():
+def test(dataprocessor):
     print("Loading test data...")
     start_time = time.time()
-    x_test, y_test = process_file(test_dir, word_to_id, cat_to_id, config.seq_length)
+    x_test, y_test = dataprocessor.process_file(test_dir, word_to_id, cat_to_id, config.seq_length)
 
     session = tf.Session()
     session.run(tf.global_variables_initializer())
     saver = tf.train.Saver()
-    saver.restore(sess=session, save_path=save_path)  # 读取保存的模型
+    saver.restore(sess=session, save_path=save_path)  # load the model file
 
     print('Testing...')
-    loss_test, acc_test = evaluate(session, x_test, y_test)
-    msg = 'Test Loss: {0:>6.2}, Test Acc: {1:>7.2%}'
+    loss_test, acc_test = evaluate(session, x_test, y_test,dataprocessor)
+    msg = 'Test Loss: {0}, Test Acc: {1}'
     print(msg.format(loss_test, acc_test))
 
     batch_size = 128
     data_len = len(x_test)
     num_batch = int((data_len - 1) / batch_size) + 1
 
-    y_test_cls = np.argmax(y_test, 1)
-    y_pred_cls = np.zeros(shape=len(x_test), dtype=np.int32)  # 保存预测结果
-    for i in range(num_batch):  # 逐批次处理
+    y_test_cls = np.argmax(y_test, 1) #get the max on each row
+    y_pred_cls = np.zeros(shape=len(x_test), dtype=np.int32)  # save the predict results
+    for i in range(num_batch):
         start_id = i * batch_size
         end_id = min((i + 1) * batch_size, data_len)
         feed_dict = {
@@ -174,42 +172,40 @@ def test():
         }
         y_pred_cls[start_id:end_id] = session.run(model.y_pred_cls, feed_dict=feed_dict)
 
-    # 评估
-    print("Precision, Recall and F1-Score...")
+
+    # evaluation
+    print("111Precision, Recall and F1-Score...")
+    print("max-min test.",max(y_test_cls)," ",min(y_test_cls)," pred.",max(y_pred_cls),' ',min(y_pred_cls))
     print(metrics.classification_report(y_test_cls, y_pred_cls, target_names=categories))
 
-    # 混淆矩阵
-    print("Confusion Matrix...")
+    # Confusion Matrix.TP FP  /n FN TN
+    print("Confusion Matrix:")
     cm = metrics.confusion_matrix(y_test_cls, y_pred_cls)
     print(cm)
 
     time_dif = get_time_dif(start_time)
-    print("Time usage:", time_dif)
-
+    print("test cost time:", time_dif)
 
 if __name__ == '__main__':
+
+
+    config = TCNNConfig()
+
+    dataprocessor= DataProcessor()
+
+    config.seq_length = dataprocessor.prepareDictory([test_dir,val_dir,train_dir], vocab_dir)
+
+    categories, cat_to_id = dataprocessor.read_category()
+    words, word_to_id = dataprocessor.read_vocab(vocab_dir)
+    config.vocab_size = len(words)
+    model = TextCNN(config)
+    # train(dataprocessor)
+    print('--------------test------------')
+    test(dataprocessor)
     # if len(sys.argv) != 2 or sys.argv[1] not in ['train', 'test']:
     #     raise ValueError("""usage: python cnn_run.py [train / test]""")
-    #
-    # print('Configuring CNN model...')
-    # config = TCNNConfig()
-    # if not os.path.exists(vocab_dir):  # 如果不存在词汇表，重建
-    #     build_vocab(train_dir, vocab_dir, config.vocab_size)
-    # categories, cat_to_id = read_category()
-    # words, word_to_id = read_vocab(vocab_dir)
-    # config.vocab_size = len(words)
-    # model = TextCNN(config)
 
     # if sys.argv[1] == 'train':
     #     train()
     # else:
     #     test()
-
-    config = TCNNConfig()
-    build_vocab(train_dir, vocab_dir, config.vocab_size)
-    categories, cat_to_id = read_category()
-    words, word_to_id = read_vocab(vocab_dir)
-    config.vocab_size = len(words)
-    model = TextCNN(config)
-    train()
-    test()

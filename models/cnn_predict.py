@@ -7,7 +7,7 @@ import tensorflow as tf
 import tensorflow.contrib.keras as kr
 
 from models.cnn_model import TCNNConfig, TextCNN
-from utils.sms_loader import read_category, read_vocab
+from data_processor.dataprocessor import read_category, read_vocab
 
 # try:
 #     bool(type(unicode))

@@ -1,9 +1,11 @@
 # coding: utf-8
 
 from __future__ import print_function
-
-import os
 import sys
+sys.path.append(".")
+print(sys.path)
+import os
+
 import time
 from datetime import timedelta
 

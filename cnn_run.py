@@ -3,19 +3,17 @@
 
 from __future__ import print_function
 
-
 import sys
-
-sys.path.append(".")
-print(sys.path)
-import time
-from datetime import timedelta
-
+# sys.path.append(".")
+# print(sys.path)
+import numpy as np
+import os
 import tensorflow as tf
+import time
 from sklearn import metrics
-
 from models.cnn_model import TCNNConfig, TextCNN
-from utils.dataProcesser import *
+from data_processor.dataprocessor import DataProcessor
+from datetime import timedelta
 
 base_dir = 'dataset'
 base_dic_dir = 'dataDic'
@@ -113,7 +111,7 @@ def train(dataprocessor):
                 # 每多少轮次输出在训练集和验证集上的性能
                 feed_dict[model.keep_prob] = 1.0
                 loss_train, acc_train = session.run([model.loss, model.acc], feed_dict=feed_dict)
-                loss_val, acc_val = evaluate(session, x_val, y_val)
+                loss_val, acc_val = evaluate(session, x_val, y_val,dataprocessor)
 
                 if acc_val > best_acc_val:
                     # 保存最好结果
@@ -187,7 +185,6 @@ def test(dataprocessor):
     print("test cost time:", time_dif)
 
 if __name__ == '__main__':
-
 
     config = TCNNConfig()
 

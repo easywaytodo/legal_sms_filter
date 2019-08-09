@@ -10,6 +10,9 @@ import re
 import pkuseg
 import os
 import subprocess
+# import sys
+# sys.path.append(".")
+# print(sys.path)
 
 if sys.version_info[0] > 2:
     is_py3 = True
@@ -22,24 +25,25 @@ class DataProcessor(object):
 
 
     def prepareDictory(self, dirs,vocab_dir):
-        self.pku_seg = pkuseg.pkuseg(user_dict='/home/yuan/workplace/code/legal-sms-filter/dataDic/sms_dic.txt')
-        stopwords = pd.read_csv("/home/yuan/workplace/code/legal-sms-filter/dataDic/stopwords.txt", index_col=False, quoting=3, sep="\t", names=['stopword'],
+        self.pku_seg = pkuseg.pkuseg(user_dict='dataDic/sms_dic.txt')
+        stopwords = pd.read_csv("dataDic/stopwords.txt", sep="\t", names=['stopword'],
                                 encoding='utf-8')
         self.stopwords = stopwords['stopword'].values
-
+        print('stop:',self.stopwords)
         print('--------------split train,validation,test data set--------------')
-        pos, neg = self.merge_csv()
-        self.build_train_dev_test_set(pos, neg)
+        # pos, neg = self.merge_csv()
+        # self.build_train_dev_test_set(pos, neg)
 
         print('--------------build vocabulary--------------')
         self.max_sequence_length = self.build_vocab(dirs, vocab_dir)
 
 
     def build_train_dev_test_set(self, pos, neg):
-
+        os.system('rm -rf dataset/train dataset/dev dataset/test dataset/state!=4.csv dataset/state=4.csv')
         file_names=['test','dev','train']
         (status, pos_row_length) = subprocess.getstatusoutput('wc -l ' + pos)
         (status, neg_row_length) = subprocess.getstatusoutput('wc -l ' + neg)
+        print(neg_row_length,' ',pos_row_length)
         max_length_of_data_set = min(int(pos_row_length.split(' ')[0]), int(neg_row_length.split(' ')[0]))
         subprocess.getstatusoutput('rm -rf dataset/{0} dataset/{1} dataset/{2}'.format(file_names[0], file_names[1], file_names[2]))
         subprocess.getstatusoutput('mkdir -p dataset/{0} dataset/{1} dataset/{2}'.format(file_names[0],file_names[1],file_names[2]) )
@@ -59,35 +63,33 @@ class DataProcessor(object):
         saveFiles(neg, chunk_size,'neg_state!=4.csv')
 
     def merge_csv(self):
-        os.system('rm -rf /home/yuan/workplace/code/legal-sms-filter/dataset/train'
-                  ' /home/yuan/workplace/code/legal-sms-filter'
-                  ' /home/yuan/workplace/code/legal-sms-filter/dataset/dev dataset/test dataset/state!=4.csv '
-                  '/home/yuan/workplace/code/legal-sms-filter/dataset/state=4.csv')
-        g = os.walk('/home/yuan/workplace/code/legal-sms-filter/dataset')
-        paths = []
-        for path, dir_list, file_list in g:
-            for file_name in file_list:
-                paths.append(os.path.join(path, file_name))
-        print(paths)
-        rejectionFiles=[]
-        passFiles=[]
-        for afile in paths:
-            if 'state!=4' in afile:
-                rejectionFiles.append(afile)
-            elif 'state=4' in afile:
-                passFiles.append(afile)
+        if not os.path.exists('dataset/pos.csv') or not os.path.exists('dataset/neg.csv'):
+            g = os.walk('dataset')
+            paths = []
+            for path, dir_list, file_list in g:
+                for file_name in file_list:
+                    paths.append(os.path.join(path, file_name))
+            print('merge-->',paths)
+            rejectionFiles=[]
+            passFiles=[]
+            for afile in paths:
+                if 'state!=4' in afile:
+                    rejectionFiles.append(afile)
+                elif 'state=4' in afile:
+                    passFiles.append(afile)
+            print(passFiles)
+            print(rejectionFiles)
+            def merge_same_type(file_list, saveFile_Name):
+                df = pd.read_csv(file_list[0])
+                df.to_csv(saveFile_Name, encoding="utf_8_sig", index=False)
+                print('write ',saveFile_Name)
+                for i in range(1, len(file_list)):
+                    df = pd.read_csv(file_list[i])
+                    df.to_csv(saveFile_Name, encoding="utf_8_sig", index=False, header=False, mode='a+')
 
-        def merge_same_type(file_list, saveFile_Name):
-            df = pd.read_csv(file_list[0])
-            df.to_csv(saveFile_Name, encoding="utf_8_sig", index=False)
-
-            for i in range(1, len(file_list)):
-                df = pd.read_csv(file_list[i])
-                df.to_csv(saveFile_Name, encoding="utf_8_sig", index=False, header=False, mode='a+')
-
-        merge_same_type(passFiles,'dataset/state=4.csv')
-        merge_same_type(rejectionFiles, 'dataset/state!=4.csv')
-        return 'dataset/state=4.csv','dataset/state!=4.csv'
+            merge_same_type(passFiles,'dataset/pos.csv')
+            merge_same_type(rejectionFiles, 'dataset/neg.csv')
+        return 'dataset/pos.csv','dataset/neg.csv'
 
     def native_word(self,word, encoding='utf-8'):
         """support compatibility between python2 and python3"""

@@ -175,6 +175,19 @@ def test(dataprocessor):
     print("111Precision, Recall and F1-Score...")
     print("max-min test.",max(y_test_cls)," ",min(y_test_cls)," pred.",max(y_pred_cls),' ',min(y_pred_cls))
     print(metrics.classification_report(y_test_cls, y_pred_cls, target_names=categories))
+    print('len=',len(y_pred_cls),'   ',len(y_test_cls))
+    false_precit=[]
+    false_precit_result=[]
+    for index,value in enumerate(y_test_cls):
+        if y_test_cls[index] != y_pred_cls[index]:
+            false_precit.append(index)
+            false_precit_result.append([y_test_cls[index],y_pred_cls[index]])
+    print('the total number of the wrong prediction:',len(false_precit),' index:',false_precit)
+    df=dataprocessor.get_content_by_index(test_dir,false_precit[:5])
+    print(false_precit_result[:5])
+    df.to_csv('dataset/toImprove.csv')
+
+
 
     # Confusion Matrix.TP FP  /n FN TN
     print("Confusion Matrix:")
@@ -190,13 +203,13 @@ if __name__ == '__main__':
 
     dataprocessor= DataProcessor()
 
-    config.seq_length = dataprocessor.prepareDictory([test_dir,val_dir,train_dir], vocab_dir,1)
+    config.seq_length = dataprocessor.prepareDictory([test_dir,val_dir,train_dir], vocab_dir,0)
 
     categories, cat_to_id = dataprocessor.read_category()
     words, word_to_id = dataprocessor.read_vocab(vocab_dir)
     config.vocab_size = len(words)
     model = TextCNN(config)
-    train(dataprocessor)
+    # train(dataprocessor)
     print('--------------test------------')
     test(dataprocessor)
     # if len(sys.argv) != 2 or sys.argv[1] not in ['train', 'test']:

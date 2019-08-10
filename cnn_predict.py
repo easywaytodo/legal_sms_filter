@@ -64,9 +64,9 @@ class CnnModel:
     def format_input(self,message):
         self.start_time=time.time()
         message = re.sub(r"(www|http)\S+", "", message)
-        print('    remove url:', message)
+        # print('    remove url:', message)
         segs = self.dataprocessor.pku_seg.cut(message)
-        print('    fen ci:',segs)
+        # print('    fen ci:',segs)
         list_seg = filter(lambda x: len(x) > 0 and x != '\r\n', segs)
         cut1_list = list(list_seg)
         segs1 = filter(lambda x: x not in self.dataprocessor.stopwords, cut1_list)
@@ -107,10 +107,9 @@ if __name__ == '__main__':
     ip = ni.ifaddresses(en0)[ni.AF_INET][0]['addr']
     port=5002
     app.run(host=ip, port=str(port))
-
-
-    # test_demo = ['【优浙点】饭团家·甜品蛋糕披萨生日蛋糕 的顾客已完成评价：6419154608139925',
-    #     '【简奕科技】尊敬的会员 :夏文慧您好,您现在已经成功办理开髋主题课卡 卡号为6526',
-    #              '【优浙点】饭团家·甜品蛋糕披萨生日蛋糕 的顾客已完成评价：6419154608139925']
+    # import pandas as pd
+    # df=pd.read_csv('dataset/toImprove.csv')
+    #
+    # test_demo = df.CONTENT.values
     # for i in test_demo:
     #     cnn_model.predict(i)

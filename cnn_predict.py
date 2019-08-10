@@ -13,11 +13,27 @@ import re
 
 from models.cnn_model import TCNNConfig, TextCNN
 from data_processor.dataprocessor import DataProcessor
+import netifaces as ni
+from flask import Flask
+from flask import request as req
+
+
+app = Flask(__name__)
 
 # try:
 #     bool(type(unicode))
 # except NameError:
 #     unicode = str
+
+
+@app.route("/smsfilter", methods=["GET", "POST"])
+def smsfilter():
+    # http://172.16.4.183:5002/smsfilter?message= 优浙点】饭团家·甜品蛋糕披萨生日蛋糕 的顾客已完成评价：6419154608139925
+    message = req.args.get('message')
+    result=cnn_model.predict(message)
+    print('message:',message)
+    return result
+
 
 class CnnModel:
     def __init__(self):
@@ -55,7 +71,6 @@ class CnnModel:
         cut1_list = list(list_seg)
         segs1 = filter(lambda x: x not in self.dataprocessor.stopwords, cut1_list)
         cut2_list = list(segs1)
-        print('    remove stops:', cut2_list)
         return cut2_list
 
     def predict(self, message):
@@ -84,7 +99,18 @@ class CnnModel:
 if __name__ == '__main__':
     print('predict----..................................')
     cnn_model = CnnModel()
-    test_demo = ['【简奕科技】尊敬的会员 :夏文慧您好,您现在已经成功办理开髋主题课卡 卡号为6526',
-                 '【优浙点】饭团家·甜品蛋糕披萨生日蛋糕 的顾客已完成评价：6419154608139925']
-    for i in test_demo:
-        cnn_model.predict(i)
+    en0 = ''
+    for x in ni.interfaces():
+        if 'en' in x:
+            en0 = x
+    ni.ifaddresses(en0)
+    ip = ni.ifaddresses(en0)[ni.AF_INET][0]['addr']
+    port=5002
+    app.run(host=ip, port=str(port))
+
+
+    # test_demo = ['【优浙点】饭团家·甜品蛋糕披萨生日蛋糕 的顾客已完成评价：6419154608139925',
+    #     '【简奕科技】尊敬的会员 :夏文慧您好,您现在已经成功办理开髋主题课卡 卡号为6526',
+    #              '【优浙点】饭团家·甜品蛋糕披萨生日蛋糕 的顾客已完成评价：6419154608139925']
+    # for i in test_demo:
+    #     cnn_model.predict(i)

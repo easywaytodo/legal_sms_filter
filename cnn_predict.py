@@ -19,13 +19,6 @@ from data_processor.dataprocessor import DataProcessor
 # except NameError:
 #     unicode = str
 
-base_dir = 'data/cnews'
-vocab_dir = os.path.join(base_dir, 'cnews.vocab.txt')
-
-save_dir = 'checkpoints/textcnn'
-save_path = os.path.join(save_dir, 'best_validation')  # 最佳验证结果保存路径
-
-
 class CnnModel:
     def __init__(self):
         self.config = TCNNConfig()
@@ -41,10 +34,10 @@ class CnnModel:
         save_dir = 'checkpoints/textcnn'
         save_path = os.path.join(save_dir, 'best_validation')
 
-        self.config.seq_length = self.dataprocessor.prepareDictory([test_dir,val_dir,train_dir], vocab_dir)
+        self.config.seq_length = self.dataprocessor.prepareDictory([test_dir,val_dir,train_dir], vocab_dir,0)
         self.categories, self.cat_to_id = self.dataprocessor.read_category()
-        words, self.word_to_id = self.dataprocessor.read_vocab(vocab_dir)
-        self.config.vocab_size = len(words)
+        self.words, self.word_to_id = self.dataprocessor.read_vocab(vocab_dir)
+        self.config.vocab_size = len(self.words)
         self.model = TextCNN(self.config)
 
         self.session = tf.Session()
@@ -67,6 +60,11 @@ class CnnModel:
 
     def predict(self, message):
         cut_input = self.format_input(message)
+        for i in cut_input:
+            if i in self.word_to_id:
+                print(i,"  ",self.word_to_id[i])
+            else:
+                print('outsider of vocabulary',i)
         data = [self.word_to_id[x] for x in cut_input if x in self.word_to_id]
         mode_input = kr.preprocessing.sequence.pad_sequences([data], self.config.seq_length)
         feed_dict = {

@@ -26,23 +26,24 @@ class DataProcessor(object):
 
     def prepareDictory(self, dirs,vocab_dir,trainflag):
         self.pku_seg = pkuseg.pkuseg(user_dict='dataDic/sms_dic.txt')
-        # stopwords = pd.read_csv("dataDic/stopwords.txt", sep="\t", names=['stopword'],
-        #                         encoding='utf-8')
         fd = open('dataDic/stopwords.txt')
         lines = fd.readlines()
         self.stopwords = [x.strip() for x in lines]
+        print('stop:',self.stopwords)
 
         print('--------------split train,validation,test data set--------------')
         if trainflag == 1:
             pos, neg = self.merge_csv()
             self.build_train_dev_test_set(pos, neg)
+            subprocess.getstatusoutput(
+                'rm -rf {0}'.format(vocab_dir))
+
 
         print('--------------build vocabulary--------------')
         self.max_sequence_length = self.build_vocab(dirs, vocab_dir)
 
 
     def build_train_dev_test_set(self, pos, neg):
-        os.system('rm -rf dataset/train dataset/dev dataset/test dataset/state!=4.csv dataset/state=4.csv')
         file_names=['test','dev','train']
         (status, pos_row_length) = subprocess.getstatusoutput('wc -l ' + pos)
         (status, neg_row_length) = subprocess.getstatusoutput('wc -l ' + neg)
@@ -53,10 +54,12 @@ class DataProcessor(object):
         chunk_size = int(max_length_of_data_set / 5)
         print('chunksize=',chunk_size)
         def saveFiles(file,chunk_size,new_name):
+            # pos_rows = pd.read_csv(file, chunksize=chunk_size,error_bad_lines=False)
             pos_rows = pd.read_csv(file, chunksize=chunk_size)
             for i, pos_chuck in enumerate(pos_rows):
                 if i > 4:
                     break
+                print('chunk', i, ' len=', len(pos_chuck))
                 if i< 3:
                     pos_chuck.to_csv('dataset/{0}/{1}'.format(file_names[i], new_name))
                 else:
@@ -66,7 +69,10 @@ class DataProcessor(object):
         saveFiles(neg, chunk_size,'neg_state!=4.csv')
 
     def merge_csv(self):
+
         if not os.path.exists('dataset/pos.csv') or not os.path.exists('dataset/neg.csv'):
+            file_names = ['test', 'dev', 'train']
+            subprocess.getstatusoutput('rm -rf dataset/{0} dataset/{1} dataset/{2}'.format(file_names[0], file_names[1], file_names[2]))
             g = os.walk('dataset')
             paths = []
             for path, dir_list, file_list in g:
@@ -80,8 +86,8 @@ class DataProcessor(object):
                     rejectionFiles.append(afile)
                 elif 'state=4' in afile:
                     passFiles.append(afile)
-            print(passFiles)
-            print(rejectionFiles)
+            print('postive files:',passFiles)
+            print('negative files:',rejectionFiles)
             def merge_same_type(file_list, saveFile_Name):
                 df = pd.read_csv(file_list[0])
                 df.to_csv(saveFile_Name, encoding="utf_8_sig", index=False)
@@ -167,7 +173,7 @@ class DataProcessor(object):
                 a = content.split(' ')
                 alldata.append(a)
             except:
-                print('except:', content, ' ', type(content), " index=", index, " df=", df.iloc[index])
+                print('except: content=', content, ',type=', type(content), " index=", index, " df=", df.iloc[index])
                 continue
 
         return alldata, df.LABEL.to_list()
@@ -179,6 +185,7 @@ class DataProcessor(object):
         for dir in dirs:
             data_content, _ = self.read_file(dir)
             dataset.extend(data_content)
+
 
         maxSequence = max(dataset, key=len)
         print(' max length:',len(maxSequence)," ",maxSequence)

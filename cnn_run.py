@@ -190,13 +190,13 @@ if __name__ == '__main__':
 
     dataprocessor= DataProcessor()
 
-    config.seq_length = dataprocessor.prepareDictory([test_dir,val_dir,train_dir], vocab_dir)
+    config.seq_length = dataprocessor.prepareDictory([test_dir,val_dir,train_dir], vocab_dir,1)
 
     categories, cat_to_id = dataprocessor.read_category()
     words, word_to_id = dataprocessor.read_vocab(vocab_dir)
     config.vocab_size = len(words)
     model = TextCNN(config)
-    # train(dataprocessor)
+    train(dataprocessor)
     print('--------------test------------')
     test(dataprocessor)
     # if len(sys.argv) != 2 or sys.argv[1] not in ['train', 'test']:

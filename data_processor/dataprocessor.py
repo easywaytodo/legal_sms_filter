@@ -24,15 +24,18 @@ if sys.version_info[0] > 2:
 class DataProcessor(object):
 
 
-    def prepareDictory(self, dirs,vocab_dir):
+    def prepareDictory(self, dirs,vocab_dir,trainflag):
         self.pku_seg = pkuseg.pkuseg(user_dict='dataDic/sms_dic.txt')
-        stopwords = pd.read_csv("dataDic/stopwords.txt", sep="\t", names=['stopword'],
-                                encoding='utf-8')
-        self.stopwords = stopwords['stopword'].values
-        print('stop:',self.stopwords)
+        # stopwords = pd.read_csv("dataDic/stopwords.txt", sep="\t", names=['stopword'],
+        #                         encoding='utf-8')
+        fd = open('dataDic/stopwords.txt')
+        lines = fd.readlines()
+        self.stopwords = [x.strip() for x in lines]
+
         print('--------------split train,validation,test data set--------------')
-        # pos, neg = self.merge_csv()
-        # self.build_train_dev_test_set(pos, neg)
+        if trainflag == 1:
+            pos, neg = self.merge_csv()
+            self.build_train_dev_test_set(pos, neg)
 
         print('--------------build vocabulary--------------')
         self.max_sequence_length = self.build_vocab(dirs, vocab_dir)
@@ -139,8 +142,10 @@ class DataProcessor(object):
                 for line in content:
                     segs = self.pku_seg.cut(line)
                     segs = filter(lambda x: len(x) > 1 and x != '\r\n', segs)
-                    segs = filter(lambda x: x not in self.stopwords, segs)
-                    sentences.append((" ".join(segs)))
+                    cut1_list = list(segs)
+                    segs1 = filter(lambda x: x not in self.stopwords, cut1_list)
+                    cut2_list = list(segs1)
+                    sentences.append((" ".join(cut2_list)))
 
                 df['CLEAN_noUrl_noStop'] = pd.DataFrame({'CLEAN_noUrl_noStop': sentences})
 

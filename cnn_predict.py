@@ -55,14 +55,15 @@ class CnnModel:
     def format_input(self,message):
         self.start_time=time.time()
         message = re.sub(r"(www|http)\S+", "", message)
+        print('    remove url:', message)
         segs = self.dataprocessor.pku_seg.cut(message)
-        print('0cut:',segs)
-        segs = filter(lambda x: len(x) > 0 and x != '\r\n', segs)
-        print('1cut:',list(segs))
-        print('stop:',self.dataprocessor.stopwords)
-        segs = filter(lambda x: x not in self.dataprocessor.stopwords, segs)
-        print('2cut:',list(segs))
-        return list(segs)
+        print('    fen ci:',segs)
+        list_seg = filter(lambda x: len(x) > 0 and x != '\r\n', segs)
+        cut1_list = list(list_seg)
+        segs1 = filter(lambda x: x not in self.dataprocessor.stopwords, cut1_list)
+        cut2_list = list(segs1)
+        print('    remove stops:', cut2_list)
+        return cut2_list
 
     def predict(self, message):
         cut_input = self.format_input(message)
@@ -77,7 +78,7 @@ class CnnModel:
         print('paint input:',message)
         print('cut input:',cut_input)
         print('mode input:',mode_input)
-        print('ouput ->:',y_pred_cls)
+        print('ouput ->:',y_pred_cls,' <.......',self.categories[y_pred_cls[0]],'.......>')
         print('predict cost:',time.time()-self.start_time)
         return self.categories[y_pred_cls[0]]
 
@@ -88,4 +89,4 @@ if __name__ == '__main__':
     test_demo = ['【简奕科技】尊敬的会员 :夏文慧您好,您现在已经成功办理开髋主题课卡 卡号为6526',
                  '【优浙点】饭团家·甜品蛋糕披萨生日蛋糕 的顾客已完成评价：6419154608139925']
     for i in test_demo:
-        print(cnn_model.predict(i))
+        cnn_model.predict(i)
